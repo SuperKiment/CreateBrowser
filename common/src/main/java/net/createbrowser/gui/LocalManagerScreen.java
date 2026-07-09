@@ -125,7 +125,9 @@ public final class LocalManagerScreen extends Screen {
             renamed -> {
                 message = "Renamed to " + renamed.getFileName();
                 messageColor = 0x55FF55;
-                Minecraft.getInstance().setScreen(parent);
+                if (Minecraft.getInstance().screen == this) {
+                    Minecraft.getInstance().setScreen(parent);
+                }
             },
             e -> {
                 Constants.LOG.error("[CreateBrowser] Rename failed: {}", e.getMessage(), e);
@@ -141,7 +143,11 @@ public final class LocalManagerScreen extends Screen {
                 SchematicFileManager.delete(file.path());
                 return true;
             },
-            ok -> Minecraft.getInstance().setScreen(parent),
+            ok -> {
+                if (Minecraft.getInstance().screen == this) {
+                    Minecraft.getInstance().setScreen(parent);
+                }
+            },
             e -> {
                 Constants.LOG.error("[CreateBrowser] Delete failed: {}", e.getMessage(), e);
                 message = "Delete failed: " + e.getMessage();

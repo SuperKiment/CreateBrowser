@@ -86,7 +86,9 @@ public class SettingsScreen extends Screen {
     }
 
     private void close() {
-        Minecraft.getInstance().setScreen(parent);
+        if (Minecraft.getInstance().screen == this) {
+            Minecraft.getInstance().setScreen(parent);
+        }
     }
 
     @Override
