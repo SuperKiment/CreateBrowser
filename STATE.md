@@ -1,6 +1,6 @@
 # STATE.md — État d'avancement de CreateBrowser
 
-> Instantané au 2026-07-09. Branche `master`, version `0.1.1`.
+> Instantané au 2026-07-09. Branche `master`, version `0.2.0`.
 > Légende : ✅ fait · 🟡 partiel · ⛔ manquant · 🐛 bug/dette
 
 ---

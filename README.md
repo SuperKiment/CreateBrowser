@@ -80,13 +80,13 @@ Prérequis : **JDK 17** (Temurin recommandé).
 ./gradlew :forge:runClient
 ```
 
-Artefact produit : `forge/build/libs/createbrowser-forge-1.20.1-0.1.1.jar`.
+Artefact produit : `forge/build/libs/createbrowser-forge-1.20.1-0.2.0.jar`.
 
 CI GitHub Actions configurée dans `.github/workflows/build.yml` (déclenchée sur push `main`/`dev` et pull requests).
 
 ## Installation
 
-1. Télécharger `createbrowser-forge-1.20.1-0.1.1.jar` depuis les releases (ou builder localement, voir ci-dessus).
+1. Télécharger `createbrowser-forge-1.20.1-0.2.0.jar` depuis les releases (ou builder localement, voir ci-dessus).
 2. Le placer dans `<instance Minecraft>/mods/`.
 3. Avoir Forge `47.2.30+` pour MC 1.20.1.
 4. Le mod [Create](https://www.curseforge.com/minecraft/mc-mods/create) est **optionnel** — sans Create, le navigateur reste utilisable et écrit dans `schematics/` (utile pour Litematica ou d'autres mods compatibles avec ce format).
