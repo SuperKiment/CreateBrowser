@@ -14,7 +14,7 @@
 | 2 — Enrichissement | ✅ | Favoris/historique/local/thumbnails, filtres tri+catégorie, SettingsScreen. |
 | 3 — Upload + intégration Create | ✅ | Upload anonyme, Mixin bouton, badges compat, CreateBridge câblé (badge version). |
 | 4 — Multi-sources & robustesse | 🟡 | `SourceRegistry` + 2 sources (createmod.com, local), cache complet (recherche+détail, LRU borné), mode hors-ligne. ⛔ Pas de 2e source réseau, pas de NeoForge. |
-| 5 — Preview 3D / Quick-Share / i18n | 🟡 | i18n FR+EN faite. ⛔ Preview 3D et quick-share absents. |
+| 5 — Preview 3D / Quick-Share / i18n | 🟡 | i18n FR+EN faite, quick-share (copie de lien) fait. ⛔ Preview 3D absente. |
 | 6 — Polish / publication | 🟡 | Tests verts (`./gradlew build test`). ⛔ Pas de release Modrinth/CurseForge. |
 
 **Git** : tout le travail Phases 1–3 + robustesse est commité par module sur `master`.
@@ -23,7 +23,7 @@
 
 ## Fait depuis l'instantané du 2026-07-08
 
-- ✅ Versions alignées (`0.1.1` partout : gradle.properties, Constants, README).
+- ✅ Versions alignées puis bump `0.2.0` (gradle.properties, Constants, README).
 - ✅ `./gradlew build test` vert (65+ tests).
 - ✅ Cache détail branché (`detail:<source>:<name>`, TTL `detailTtlMinutes`).
 - ✅ `evictLru` branché : throttlé (1×/min max) après chaque écriture cache, borne `cache.maxSizeMB`.
@@ -40,12 +40,11 @@
 
 ## Restant (par priorité)
 
-1. ⛔ **Quick-share** : bouton « Share » dans DetailScreen → copie l'URL createmod.com dans le presse-papier.
-2. ⛔ **Filtre taille** : impossible client-side (pas de `block_count` dans les résultats de recherche). Nécessite support API.
-3. ⛔ **2e source réseau** (schematicannon.com) : API non documentée — bloqué tant que pas de spec.
-4. ⛔ **NeoForge 1.21.1** : le MultiLoader actuel compile `common/` contre MC 1.20.1 ; un port 1.21.1 exige une branche dédiée (mappings/GuiGraphics différents). Décision : branche `mc1.21`, pas un sous-projet.
-5. ⛔ **Preview 3D** (Phase 5) : gros chantier rendu ; flag config `enable3dPreview` prévu, non commencé.
-6. ⛔ **Publication** Modrinth/CurseForge : nécessite comptes + validation manuelle in-game.
+1. ⛔ **Filtre taille** : impossible client-side (pas de `block_count` dans les résultats de recherche). Nécessite support API.
+2. ⛔ **2e source réseau** (schematicannon.com) : API non documentée — bloqué tant que pas de spec.
+3. ⛔ **NeoForge 1.21.1** : le MultiLoader actuel compile `common/` contre MC 1.20.1 ; un port 1.21.1 exige une branche dédiée (mappings/GuiGraphics différents). Décision : branche `mc1.21`, pas un sous-projet.
+4. ⛔ **Preview 3D** (Phase 5) : gros chantier rendu ; flag config `enable3dPreview` prévu, non commencé.
+5. ⛔ **Publication** Modrinth/CurseForge : nécessite comptes + validation manuelle in-game.
 
 ## Contraintes connues
 
