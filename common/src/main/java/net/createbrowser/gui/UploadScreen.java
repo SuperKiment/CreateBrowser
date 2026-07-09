@@ -2,7 +2,8 @@ package net.createbrowser.gui;
 
 import net.createbrowser.api.model.UploadRequest;
 import net.createbrowser.api.model.UploadResult;
-import net.createbrowser.api.source.CreateModComSource;
+import net.createbrowser.api.source.SchematicSource;
+import net.createbrowser.api.source.SourceRegistry;
 import net.createbrowser.platform.Services;
 import net.createbrowser.storage.LocalFile;
 import net.createbrowser.util.AsyncExecutor;
@@ -26,7 +27,7 @@ public final class UploadScreen extends Screen {
 
     private final LocalFile file;
     private final Screen parent;
-    private final CreateModComSource source = new CreateModComSource();
+    private final SchematicSource source = SourceRegistry.primary();
 
     private Button publishButton;
     private Button cancelButton;

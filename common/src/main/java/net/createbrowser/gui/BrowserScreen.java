@@ -5,9 +5,9 @@ import com.google.gson.JsonObject;
 import net.createbrowser.api.model.SchematicEntry;
 import net.createbrowser.api.model.SearchFilters;
 import net.createbrowser.api.model.SearchResult;
-import net.createbrowser.api.source.CreateModComSource;
 import net.createbrowser.api.source.LocalSource;
 import net.createbrowser.api.source.SchematicSource;
+import net.createbrowser.api.source.SourceRegistry;
 import net.createbrowser.gui.widget.FilterDropdown;
 import net.createbrowser.gui.widget.PaginationWidget;
 import net.createbrowser.gui.widget.SchematicListWidget;
@@ -75,7 +75,7 @@ public class BrowserScreen extends Screen {
 
     public BrowserScreen() {
         super(Component.translatable("createbrowser.screen.title"));
-        this.source = new CreateModComSource();
+        this.source = SourceRegistry.primary();
         this.createBadge = Services.CREATE.isCreateLoaded()
             ? Component.translatable("createbrowser.screen.create_version",
                 Services.CREATE.getCreateVersion() != null ? Services.CREATE.getCreateVersion() : "?")
@@ -145,6 +145,11 @@ public class BrowserScreen extends Screen {
             page -> performSearch(currentQuery, page));
         addRenderableWidget(pagination.prevButton);
         addRenderableWidget(pagination.nextButton);
+
+        addRenderableWidget(Button.builder(
+            Component.literal("⚙"),
+            b -> Minecraft.getInstance().setScreen(new SettingsScreen(this))
+        ).bounds(this.width - 26, 6, 20, 20).build());
 
         applyTabUiVisibility();
         if (activeTab != Tab.SEARCH) {
@@ -288,19 +293,42 @@ public class BrowserScreen extends Screen {
                 if (listWidget != null) listWidget.setEntries(currentResults);
             }
             case FAVORITES -> {
-                List<SchematicEntry> fav = adaptFavorites(FavoritesStore.get().list());
-                currentResults = fav;
-                if (listWidget != null) listWidget.setEntries(fav);
-                setState(fav.isEmpty() ? State.EMPTY : State.RESULTS);
+                setState(State.LOADING);
+                AsyncExecutor.run(
+                    () -> FavoritesStore.get().list(),
+                    list -> {
+                        if (activeTab != Tab.FAVORITES) return;
+                        showTabEntries(adaptFavorites(list));
+                    },
+                    err -> onTabLoadError(Tab.FAVORITES, err)
+                );
             }
             case HISTORY -> {
-                List<SchematicEntry> hist = adaptHistory(HistoryStore.get().list());
-                currentResults = hist;
-                if (listWidget != null) listWidget.setEntries(hist);
-                setState(hist.isEmpty() ? State.EMPTY : State.RESULTS);
+                setState(State.LOADING);
+                AsyncExecutor.run(
+                    () -> HistoryStore.get().list(),
+                    list -> {
+                        if (activeTab != Tab.HISTORY) return;
+                        showTabEntries(adaptHistory(list));
+                    },
+                    err -> onTabLoadError(Tab.HISTORY, err)
+                );
             }
             case LOCAL -> loadLocalTab();
         }
+    }
+
+    private void showTabEntries(List<SchematicEntry> mapped) {
+        currentResults = mapped;
+        if (listWidget != null) listWidget.setEntries(mapped);
+        setState(mapped.isEmpty() ? State.EMPTY : State.RESULTS);
+    }
+
+    private void onTabLoadError(Tab tab, Throwable err) {
+        net.createbrowser.Constants.LOG.error("[CreateBrowser] {} tab load failed", tab, err);
+        if (activeTab != tab) return;
+        errorMessage = "local";
+        setState(State.ERROR);
     }
 
     private void performSearch(String query, int page) {
