@@ -1,7 +1,6 @@
 {
   "key.createbrowser.open": "Open Schematic Browser",
   "key.categories.createbrowser": "CreateBrowser",
-
   "createbrowser.screen.title": "Schematic Browser",
   "createbrowser.screen.create_version": "Create %s detected",
   "createbrowser.screen.search.placeholder": "Search schematics...",
@@ -10,16 +9,13 @@
   "createbrowser.screen.search.loading": "Searching...",
   "createbrowser.screen.search.no_results": "No schematics found",
   "createbrowser.screen.search.error": "Search failed: %s",
-
   "createbrowser.screen.tabs.search": "Search",
   "createbrowser.screen.tabs.favorites": "Favorites",
   "createbrowser.screen.tabs.history": "History",
   "createbrowser.screen.tabs.local": "My Schematics",
-
   "createbrowser.screen.favorites.empty": "No favorites yet — open a schematic and tap the star",
   "createbrowser.screen.history.empty": "No downloads yet",
   "createbrowser.screen.local.empty": "No local schematics in this instance",
-
   "createbrowser.screen.detail.title": "Schematic Details",
   "createbrowser.screen.detail.dimensions": "Size: %dx%dx%d",
   "createbrowser.screen.detail.blocks": "%d blocks",
@@ -33,7 +29,6 @@
   "createbrowser.screen.detail.back": "Back",
   "createbrowser.screen.detail.favorite": "Favorite",
   "createbrowser.screen.detail.unfavorite": "Unfavorite",
-
   "createbrowser.screen.local.open_folder": "Open Folder",
   "createbrowser.screen.local.rename": "Rename",
   "createbrowser.screen.local.delete": "Delete",
@@ -43,7 +38,6 @@
   "createbrowser.screen.local.rename_title": "Rename schematic",
   "createbrowser.screen.local.rename_save": "Save",
   "createbrowser.screen.local.rename_cancel": "Cancel",
-
   "createbrowser.filter.category": "Category",
   "createbrowser.filter.size": "Size",
   "createbrowser.filter.size.any": "Any size",
@@ -55,31 +49,27 @@
   "createbrowser.filter.sort.downloads": "Most downloaded",
   "createbrowser.filter.sort.rating": "Highest rated",
   "createbrowser.filter.sort.views": "Most viewed",
-
   "createbrowser.screen.offline": "Offline - showing cached results",
-
   "createbrowser.button.browse": "Browse Online",
   "createbrowser.screen.local.publish": "Publish",
-
   "createbrowser.screen.upload.title": "Publish to createmod.com",
   "createbrowser.screen.upload.publish": "Publish",
   "createbrowser.screen.upload.cancel": "Cancel",
   "createbrowser.screen.upload.uploading": "Uploading...",
   "createbrowser.screen.upload.too_large": "File too large (max 10 MB)",
-
   "createbrowser.compat.all_mods_present": "All required mods installed",
   "createbrowser.compat.missing_mods": "Missing: %s",
-
   "createbrowser.chat.downloaded": "[CreateBrowser] '%s' downloaded - now available in the Schematic Table",
   "createbrowser.chat.upload_success": "[CreateBrowser] '%s' uploaded - %s",
   "createbrowser.chat.upload_error": "[CreateBrowser] Upload failed: %s",
-
   "createbrowser.error.no_api_key": "No API key configured - edit config/createbrowser-client.toml",
   "createbrowser.error.no_mod_secret": "Download unavailable - mod_download_secret not configured",
   "createbrowser.error.network": "Network error",
   "createbrowser.error.rate_limited": "Rate limited - please wait a moment",
   "createbrowser.error.conflict": "This schematic already exists on createmod.com",
-
   "createbrowser.pagination.prev": "< Prev",
-  "createbrowser.pagination.next": "Next >"
+  "createbrowser.pagination.next": "Next >",
+  "createbrowser.settings.api_key": "createmod.com API key",
+  "createbrowser.settings.mod_secret": "Mod download secret",
+  "createbrowser.settings.show_thumbnails": "Show thumbnails"
 }
