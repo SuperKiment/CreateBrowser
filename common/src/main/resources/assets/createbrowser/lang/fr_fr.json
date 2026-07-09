@@ -72,5 +72,7 @@
   "createbrowser.settings.api_key": "Clé API createmod.com",
   "createbrowser.settings.mod_secret": "Secret de téléchargement du mod",
   "createbrowser.settings.show_thumbnails": "Afficher les vignettes",
-  "createbrowser.filter.category.all": "Toutes catégories"
+  "createbrowser.filter.category.all": "Toutes catégories",
+  "createbrowser.screen.detail.share": "Partager",
+  "createbrowser.chat.share_copied": "[CreateBrowser] Lien copié dans le presse-papier"
 }

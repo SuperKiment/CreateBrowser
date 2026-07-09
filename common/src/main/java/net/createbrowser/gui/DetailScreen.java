@@ -73,6 +73,11 @@ public class DetailScreen extends Screen {
         ).bounds(this.width / 2 + 80, btnY, 80, 20).build();
         addRenderableWidget(favoriteButton);
 
+        addRenderableWidget(Button.builder(
+            Component.translatable("createbrowser.screen.detail.share"),
+            b -> shareLink()
+        ).bounds(this.width / 2 + 80, btnY - 24, 80, 20).build());
+
         AsyncExecutor.run(
             () -> FavoritesStore.get().isFavorite(entry.name()),
             fav -> favoriteButton.setMessage(favoriteLabel(fav)),
@@ -114,6 +119,12 @@ public class DetailScreen extends Screen {
                 favoriteButton.active = true;
             }
         );
+    }
+
+    private void shareLink() {
+        String url = "https://createmod.com/schematics/" + entry.name();
+        Minecraft.getInstance().keyboardHandler.setClipboard(url);
+        Services.CHAT.notify(Component.translatable("createbrowser.chat.share_copied"));
     }
 
     private static Component favoriteLabel(boolean isFav) {
@@ -290,15 +301,11 @@ public class DetailScreen extends Screen {
         downloadButton.setMessage(Component.translatable("createbrowser.screen.detail.downloading"));
         downloadButton.active = false;
 
+        String displayTitle = entry.title() != null ? entry.title() : entry.name();
         AsyncExecutor.run(
             () -> {
                 byte[] data = source.download(entry.name());
-                return SchematicFileManager.saveSchematic(entry.name(), data);
-            },
-            path -> {
-                downloadState = DownloadState.DONE;
-                downloadButton.setMessage(Component.translatable("createbrowser.screen.detail.downloaded"));
-                String displayTitle = entry.title() != null ? entry.title() : entry.name();
+                var path = SchematicFileManager.saveSchematic(entry.name(), data);
                 HistoryStore.get().recordDownload(new HistoryStore.HistoryEntry(
                     entry.name(),
                     displayTitle,
@@ -306,6 +313,11 @@ public class DetailScreen extends Screen {
                     System.currentTimeMillis(),
                     path != null ? path.toString() : ""
                 ));
+                return path;
+            },
+            path -> {
+                downloadState = DownloadState.DONE;
+                downloadButton.setMessage(Component.translatable("createbrowser.screen.detail.downloaded"));
                 Services.CHAT.notify(
                     Component.translatable("createbrowser.chat.downloaded", displayTitle));
             },
