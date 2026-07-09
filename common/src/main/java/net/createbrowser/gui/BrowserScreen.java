@@ -40,6 +40,11 @@ public class BrowserScreen extends Screen {
     private enum State { IDLE, LOADING, RESULTS, EMPTY, ERROR }
     public enum Tab { SEARCH, FAVORITES, HISTORY, LOCAL }
 
+    /** A search page plus whether it was served from stale cache after a network failure. */
+    private record Fetched(SearchResult result, boolean offline) {}
+
+    private static final String ALL_CATEGORIES = "__all__";
+
     private static final int TAB_BAR_TOP = 24;
     private static final int TAB_BAR_HEIGHT = 18;
     private static final int LIST_TOP = 100;
@@ -59,6 +64,7 @@ public class BrowserScreen extends Screen {
     private Button searchButton;
     private TabBar<Tab> tabBar;
     private FilterDropdown<SearchFilters.SortMode> sortDropdown;
+    private FilterDropdown<String> categoryDropdown;
     private Button openFolderButton;
 
     private State state = State.IDLE;
@@ -71,7 +77,10 @@ public class BrowserScreen extends Screen {
     private boolean hasNext = false;
     private String currentQuery = "";
     private SearchFilters.SortMode currentSort = SearchFilters.SortMode.RECENT;
+    private String currentCategory = ALL_CATEGORIES;
+    private final List<String> categoryOptions = new ArrayList<>(List.of(ALL_CATEGORIES));
     private List<SchematicEntry> rawResults = List.of();
+    private boolean offline = false;
 
     public BrowserScreen() {
         super(Component.translatable("createbrowser.screen.title"));
@@ -118,8 +127,18 @@ public class BrowserScreen extends Screen {
             sortLabel(),
             v -> {
                 currentSort = v;
-                applyClientSort();
-                if (listWidget != null) listWidget.setEntries(currentResults);
+                refreshFilteredResults();
+            }
+        );
+
+        categoryDropdown = new FilterDropdown<>(
+            searchX + 168, filtersY, 160, 18,
+            categoryOptions,
+            currentCategory,
+            categoryLabel(),
+            v -> {
+                currentCategory = v;
+                refreshFilteredResults();
             }
         );
 
@@ -171,6 +190,12 @@ public class BrowserScreen extends Screen {
 
         if (activeTab == Tab.SEARCH) {
             sortDropdown.render(graphics, mouseX, mouseY);
+            categoryDropdown.render(graphics, mouseX, mouseY);
+            if (offline && state == State.RESULTS) {
+                graphics.drawCenteredString(this.font,
+                    Component.translatable("createbrowser.screen.offline"),
+                    this.width / 2, LIST_TOP - 12, 0xFFAA00);
+            }
         }
 
         int listCenterX = this.width / 2;
@@ -196,6 +221,7 @@ public class BrowserScreen extends Screen {
 
         if (activeTab == Tab.SEARCH) {
             sortDropdown.renderOverlay(graphics, mouseX, mouseY);
+            categoryDropdown.renderOverlay(graphics, mouseX, mouseY);
         }
     }
 
@@ -209,6 +235,7 @@ public class BrowserScreen extends Screen {
         if (tabBar != null && tabBar.mouseClicked(mouseX, mouseY, button)) return true;
         if (activeTab == Tab.SEARCH) {
             if (sortDropdown.mouseClicked(mouseX, mouseY, button)) return true;
+            if (categoryDropdown.mouseClicked(mouseX, mouseY, button)) return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -217,6 +244,7 @@ public class BrowserScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == 256) {
             if (sortDropdown != null && sortDropdown.isOpen()) { sortDropdown.close(); return true; }
+            if (categoryDropdown != null && categoryDropdown.isOpen()) { categoryDropdown.close(); return true; }
         }
         if (keyCode == 257 || keyCode == 335) {
             if (searchBar.editBox.isFocused()) {
@@ -269,16 +297,52 @@ public class BrowserScreen extends Screen {
     }
 
     private void applyClientSort() {
-        if (rawResults.isEmpty()) return;
-        List<SchematicEntry> sorted = new ArrayList<>(rawResults);
+        if (rawResults.isEmpty()) {
+            currentResults = List.of();
+            return;
+        }
+        List<SchematicEntry> filtered = new ArrayList<>(rawResults.size());
+        for (SchematicEntry e : rawResults) {
+            if (ALL_CATEGORIES.equals(currentCategory) || e.categories().contains(currentCategory)) {
+                filtered.add(e);
+            }
+        }
         Comparator<SchematicEntry> cmp = switch (currentSort) {
             case DOWNLOADS -> Comparator.comparingInt(SchematicEntry::downloads).reversed();
             case RATING -> Comparator.comparingDouble((SchematicEntry e) -> e.rating()).reversed();
             case VIEWS -> Comparator.comparingInt(SchematicEntry::views).reversed();
             case RECENT -> null;
         };
-        if (cmp != null) sorted.sort(cmp);
-        currentResults = sorted;
+        if (cmp != null) filtered.sort(cmp);
+        currentResults = filtered;
+    }
+
+    /** Re-applies category filter and sort to the current page and refreshes the list widget. */
+    private void refreshFilteredResults() {
+        applyClientSort();
+        if (listWidget != null) listWidget.setEntries(currentResults);
+        if (activeTab == Tab.SEARCH && !rawResults.isEmpty()) {
+            setState(currentResults.isEmpty() ? State.EMPTY : State.RESULTS);
+        }
+    }
+
+    /** Rebuilds the category dropdown options from the categories present on this page. */
+    private void updateCategoryOptions() {
+        var seen = new java.util.TreeSet<String>();
+        for (SchematicEntry e : rawResults) seen.addAll(e.categories());
+        categoryOptions.clear();
+        categoryOptions.add(ALL_CATEGORIES);
+        categoryOptions.addAll(seen);
+        if (!categoryOptions.contains(currentCategory)) {
+            currentCategory = ALL_CATEGORIES;
+            if (categoryDropdown != null) categoryDropdown.setSelected(ALL_CATEGORIES);
+        }
+    }
+
+    private static java.util.function.Function<String, Component> categoryLabel() {
+        return c -> ALL_CATEGORIES.equals(c)
+            ? Component.translatable("createbrowser.filter.category.all")
+            : Component.literal(c);
     }
 
     private void loadTabData(Tab tab) {
@@ -351,14 +415,29 @@ public class BrowserScreen extends Screen {
                 if (cached.isPresent()) {
                     try {
                         SearchResult r = GSON.fromJson(cached.get(), SearchResult.class);
-                        if (r != null) return r;
+                        if (r != null) return new Fetched(r, false);
                     } catch (Exception ignore) { }
                 }
-                SearchResult fresh = source.search(query, page, pageSize, filters);
-                try { CacheManager.get().putApi(cacheKey, GSON.toJson(fresh)); } catch (Exception ignore) { }
-                return fresh;
+                try {
+                    SearchResult fresh = source.search(query, page, pageSize, filters);
+                    try { CacheManager.get().putApi(cacheKey, GSON.toJson(fresh)); } catch (Exception ignore) { }
+                    return new Fetched(fresh, false);
+                } catch (Exception networkError) {
+                    // Network failed: fall back to a stale cache entry if one exists.
+                    var stale = CacheManager.get().getApi(cacheKey, Integer.MAX_VALUE);
+                    if (stale.isPresent()) {
+                        try {
+                            SearchResult r = GSON.fromJson(stale.get(), SearchResult.class);
+                            if (r != null) return new Fetched(r, true);
+                        } catch (Exception ignore) { }
+                    }
+                    throw networkError;
+                }
             },
-            this::onSearchResults,
+            fetched -> {
+                this.offline = fetched.offline();
+                onSearchResults(fetched.result());
+            },
             this::onSearchError
         );
     }
@@ -370,6 +449,7 @@ public class BrowserScreen extends Screen {
             setState(State.EMPTY);
         } else {
             rawResults = result.items();
+            updateCategoryOptions();
             applyClientSort();
             totalPages = result.totalPages();
             hasPrev = result.hasPrev();

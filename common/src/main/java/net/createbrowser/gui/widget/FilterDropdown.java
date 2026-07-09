@@ -36,6 +36,7 @@ public final class FilterDropdown<T> {
     }
 
     public T selected() { return selected; }
+    public void setSelected(T value) { this.selected = value; }
     public boolean isOpen() { return open; }
     public void close() { this.open = false; }
 

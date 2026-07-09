@@ -71,5 +71,6 @@
   "createbrowser.pagination.next": "Next >",
   "createbrowser.settings.api_key": "createmod.com API key",
   "createbrowser.settings.mod_secret": "Mod download secret",
-  "createbrowser.settings.show_thumbnails": "Show thumbnails"
+  "createbrowser.settings.show_thumbnails": "Show thumbnails",
+  "createbrowser.filter.category.all": "All categories"
 }
