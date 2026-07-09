@@ -38,6 +38,12 @@ legacyForge {
 
 sourceSets.main.resources.srcDir 'src/generated/resources'
 
+repositories {
+    maven { url = "https://maven.createmod.net" }
+    maven { url = "https://maven.tterrag.com/" }
+    maven { url = "https://maven.ithundxr.dev/snapshots" }
+}
+
 dependencies {
     compileOnly project(":common")
 }

@@ -1,6 +1,8 @@
 modLoader = "javafml" #mandatory
 loaderVersion = "${forge_loader_version_range}" #mandatory
 license = "${license}"
+[[mixins]]
+config = "createbrowser.mixins.json"
 [[mods]] #mandatory
 modId = "${mod_id}" #mandatory
 version = "${version}" #mandatory
@@ -19,3 +21,9 @@ mandatory = true
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
+[[dependencies.${mod_id}]]
+modId = "create"
+mandatory = false
+versionRange = "[0.5,)"
+ordering = "NONE"
+side = "CLIENT"

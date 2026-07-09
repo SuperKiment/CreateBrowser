@@ -1,0 +1,11 @@
+{
+  "required": false,
+  "package": "net.createbrowser.forge.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "SchematicTableScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}
