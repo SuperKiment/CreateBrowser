@@ -14,6 +14,15 @@ public interface BrowserConfig {
     int cacheMaxSizeMB();
     boolean showThumbnails();
 
+    /** Persists a new API key; no-op on platforms without a writable config backend. */
+    default void setApiKey(String value) { }
+
+    /** Persists a new mod download secret; no-op on platforms without a writable config backend. */
+    default void setModSecret(String value) { }
+
+    /** Persists the thumbnail visibility toggle; no-op on platforms without a writable config backend. */
+    default void setShowThumbnails(boolean value) { }
+
     /** Fallback used when no SPI implementation is available (e.g. unit tests). */
     BrowserConfig DEFAULT = new BrowserConfig() {
         public String apiKey() { return ""; }
