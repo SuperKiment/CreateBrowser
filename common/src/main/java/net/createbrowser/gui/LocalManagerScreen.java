@@ -120,26 +120,33 @@ public final class LocalManagerScreen extends Screen {
     private void performRename() {
         String newName = renameInput.getValue().trim();
         if (newName.isEmpty()) return;
-        try {
-            Path renamed = SchematicFileManager.rename(file.path(), newName);
-            message = "Renamed to " + renamed.getFileName();
-            messageColor = 0x55FF55;
-            Minecraft.getInstance().setScreen(parent);
-        } catch (IOException e) {
-            Constants.LOG.error("[CreateBrowser] Rename failed: {}", e.getMessage(), e);
-            message = "Rename failed: " + e.getMessage();
-            messageColor = 0xFF5555;
-        }
+        net.createbrowser.util.AsyncExecutor.run(
+            () -> SchematicFileManager.rename(file.path(), newName),
+            renamed -> {
+                message = "Renamed to " + renamed.getFileName();
+                messageColor = 0x55FF55;
+                Minecraft.getInstance().setScreen(parent);
+            },
+            e -> {
+                Constants.LOG.error("[CreateBrowser] Rename failed: {}", e.getMessage(), e);
+                message = "Rename failed: " + e.getMessage();
+                messageColor = 0xFF5555;
+            }
+        );
     }
 
     private void performDelete() {
-        try {
-            SchematicFileManager.delete(file.path());
-            Minecraft.getInstance().setScreen(parent);
-        } catch (IOException e) {
-            Constants.LOG.error("[CreateBrowser] Delete failed: {}", e.getMessage(), e);
-            message = "Delete failed: " + e.getMessage();
-            messageColor = 0xFF5555;
-        }
+        net.createbrowser.util.AsyncExecutor.run(
+            () -> {
+                SchematicFileManager.delete(file.path());
+                return true;
+            },
+            ok -> Minecraft.getInstance().setScreen(parent),
+            e -> {
+                Constants.LOG.error("[CreateBrowser] Delete failed: {}", e.getMessage(), e);
+                message = "Delete failed: " + e.getMessage();
+                messageColor = 0xFF5555;
+            }
+        );
     }
 }

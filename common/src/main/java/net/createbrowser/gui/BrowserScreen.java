@@ -328,6 +328,7 @@ public class BrowserScreen extends Screen {
 
     /** Rebuilds the category dropdown options from the categories present on this page. */
     private void updateCategoryOptions() {
+        if (categoryDropdown != null) categoryDropdown.close();
         var seen = new java.util.TreeSet<String>();
         for (SchematicEntry e : rawResults) seen.addAll(e.categories());
         categoryOptions.clear();

@@ -66,10 +66,23 @@ public class SettingsScreen extends Screen {
     }
 
     private void saveAndClose() {
-        Services.CONFIG.setApiKey(apiKeyBox.getValue().trim());
-        Services.CONFIG.setModSecret(modSecretBox.getValue().trim());
-        Services.CONFIG.setShowThumbnails(showThumbnails);
-        close();
+        String apiKey = apiKeyBox.getValue().trim();
+        String modSecret = modSecretBox.getValue().trim();
+        boolean thumbs = showThumbnails;
+        // ForgeConfigSpec.set() writes the TOML file — keep it off the game thread.
+        net.createbrowser.util.AsyncExecutor.run(
+            () -> {
+                Services.CONFIG.setApiKey(apiKey);
+                Services.CONFIG.setModSecret(modSecret);
+                Services.CONFIG.setShowThumbnails(thumbs);
+                return true;
+            },
+            ok -> close(),
+            err -> {
+                net.createbrowser.Constants.LOG.error("[CreateBrowser] Settings save failed", err);
+                close();
+            }
+        );
     }
 
     private void close() {
