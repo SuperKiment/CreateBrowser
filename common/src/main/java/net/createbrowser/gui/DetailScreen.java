@@ -3,8 +3,8 @@ package net.createbrowser.gui;
 import com.google.gson.Gson;
 import net.createbrowser.api.model.SchematicDetail;
 import net.createbrowser.api.model.SchematicEntry;
-import net.createbrowser.api.source.CreateModComSource;
 import net.createbrowser.api.source.SchematicSource;
+import net.createbrowser.api.source.SourceRegistry;
 import net.createbrowser.gui.widget.ThumbnailWidget;
 import net.createbrowser.platform.Services;
 import net.createbrowser.storage.CacheManager;
@@ -42,12 +42,13 @@ public class DetailScreen extends Screen {
     private Button favoriteButton;
     private DownloadState downloadState = DownloadState.IDLE;
     private String downloadError = "";
+    private boolean viewRecorded = false;
 
     public DetailScreen(SchematicEntry entry, Screen parent) {
         super(Component.translatable("createbrowser.screen.detail.title"));
         this.entry = entry;
         this.parent = parent;
-        this.source = new CreateModComSource();
+        this.source = SourceRegistry.primary();
     }
 
     @Override
@@ -67,34 +68,55 @@ public class DetailScreen extends Screen {
         addRenderableWidget(downloadButton);
 
         favoriteButton = Button.builder(
-            favoriteButtonLabel(),
+            favoriteLabel(false),
             b -> toggleFavorite()
         ).bounds(this.width / 2 + 80, btnY, 80, 20).build();
         addRenderableWidget(favoriteButton);
 
-        HistoryStore.get().recordView(
-            entry.name(),
-            entry.title() != null ? entry.title() : entry.name(),
-            source.id()
+        AsyncExecutor.run(
+            () -> FavoritesStore.get().isFavorite(entry.name()),
+            fav -> favoriteButton.setMessage(favoriteLabel(fav)),
+            err -> { }
         );
+
+        if (!viewRecorded) {
+            viewRecorded = true;
+            String displayTitle = entry.title() != null ? entry.title() : entry.name();
+            AsyncExecutor.run(
+                () -> {
+                    HistoryStore.get().recordView(entry.name(), displayTitle, source.id());
+                    return true;
+                },
+                r -> { },
+                err -> net.createbrowser.Constants.LOG.warn("[CreateBrowser] recordView failed", err)
+            );
+        }
 
         loadDetail();
     }
 
     private void toggleFavorite() {
-        boolean nowFav = FavoritesStore.get().toggle(new FavoritesStore.FavoriteEntry(
+        favoriteButton.active = false;
+        FavoritesStore.FavoriteEntry fe = new FavoritesStore.FavoriteEntry(
             entry.name(),
             entry.title() != null ? entry.title() : entry.name(),
             source.id(),
             System.currentTimeMillis()
-        ));
-        favoriteButton.setMessage(Component.translatable(nowFav
-            ? "createbrowser.screen.detail.unfavorite"
-            : "createbrowser.screen.detail.favorite"));
+        );
+        AsyncExecutor.run(
+            () -> FavoritesStore.get().toggle(fe),
+            nowFav -> {
+                favoriteButton.active = true;
+                favoriteButton.setMessage(favoriteLabel(nowFav));
+            },
+            err -> {
+                net.createbrowser.Constants.LOG.warn("[CreateBrowser] Favorite toggle failed", err);
+                favoriteButton.active = true;
+            }
+        );
     }
 
-    private Component favoriteButtonLabel() {
-        boolean isFav = FavoritesStore.get().isFavorite(entry.name());
+    private static Component favoriteLabel(boolean isFav) {
         return Component.translatable(isFav
             ? "createbrowser.screen.detail.unfavorite"
             : "createbrowser.screen.detail.favorite");
