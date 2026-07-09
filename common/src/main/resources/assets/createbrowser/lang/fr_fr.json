@@ -1,5 +1,85 @@
 {
   "key.createbrowser.open": "Ouvrir le navigateur de schematics",
   "key.categories.createbrowser": "CreateBrowser",
-  "createbrowser.screen.title": "Navigateur de schematics"
+
+  "createbrowser.screen.title": "Navigateur de schematics",
+  "createbrowser.screen.create_version": "Create %s détecté",
+  "createbrowser.screen.search.placeholder": "Rechercher des schematics...",
+  "createbrowser.screen.search.button": "OK",
+  "createbrowser.screen.search.hint": "Tapez un terme de recherche et appuyez sur Entrée",
+  "createbrowser.screen.search.loading": "Recherche en cours...",
+  "createbrowser.screen.search.no_results": "Aucun schematic trouvé",
+  "createbrowser.screen.search.error": "Recherche échouée : %s",
+
+  "createbrowser.screen.tabs.search": "Recherche",
+  "createbrowser.screen.tabs.favorites": "Favoris",
+  "createbrowser.screen.tabs.history": "Historique",
+  "createbrowser.screen.tabs.local": "Mes schematics",
+
+  "createbrowser.screen.favorites.empty": "Aucun favori — ouvrez un schematic et cliquez sur l'étoile",
+  "createbrowser.screen.history.empty": "Aucun téléchargement",
+  "createbrowser.screen.local.empty": "Aucun schematic local dans cette instance",
+
+  "createbrowser.screen.detail.title": "Détail du schematic",
+  "createbrowser.screen.detail.dimensions": "Taille : %dx%dx%d",
+  "createbrowser.screen.detail.blocks": "%d blocs",
+  "createbrowser.screen.detail.mods_required": "Mods requis :",
+  "createbrowser.screen.detail.mod_installed": "Installé",
+  "createbrowser.screen.detail.mod_missing": "Manquant",
+  "createbrowser.screen.detail.download": "Télécharger",
+  "createbrowser.screen.detail.downloading": "Téléchargement...",
+  "createbrowser.screen.detail.downloaded": "Téléchargé !",
+  "createbrowser.screen.detail.download_error": "Échec du téléchargement",
+  "createbrowser.screen.detail.back": "Retour",
+  "createbrowser.screen.detail.favorite": "Favori",
+  "createbrowser.screen.detail.unfavorite": "Retirer des favoris",
+
+  "createbrowser.screen.local.open_folder": "Ouvrir le dossier",
+  "createbrowser.screen.local.rename": "Renommer",
+  "createbrowser.screen.local.delete": "Supprimer",
+  "createbrowser.screen.local.delete_confirm": "Supprimer « %s » ? Action irréversible.",
+  "createbrowser.screen.local.delete_yes": "Supprimer",
+  "createbrowser.screen.local.delete_no": "Annuler",
+  "createbrowser.screen.local.rename_title": "Renommer le schematic",
+  "createbrowser.screen.local.rename_save": "Enregistrer",
+  "createbrowser.screen.local.rename_cancel": "Annuler",
+
+  "createbrowser.filter.category": "Catégorie",
+  "createbrowser.filter.size": "Taille",
+  "createbrowser.filter.size.any": "Toutes tailles",
+  "createbrowser.filter.size.small": "Petit (<500)",
+  "createbrowser.filter.size.medium": "Moyen (500-5k)",
+  "createbrowser.filter.size.large": "Grand (>5k)",
+  "createbrowser.filter.sort": "Trier par",
+  "createbrowser.filter.sort.recent": "Plus récents",
+  "createbrowser.filter.sort.downloads": "Plus téléchargés",
+  "createbrowser.filter.sort.rating": "Mieux notés",
+  "createbrowser.filter.sort.views": "Plus vus",
+
+  "createbrowser.screen.offline": "Hors ligne — résultats du cache",
+
+  "createbrowser.button.browse": "Parcourir en ligne",
+  "createbrowser.screen.local.publish": "Publier",
+
+  "createbrowser.screen.upload.title": "Publier sur createmod.com",
+  "createbrowser.screen.upload.publish": "Publier",
+  "createbrowser.screen.upload.cancel": "Annuler",
+  "createbrowser.screen.upload.uploading": "Publication en cours...",
+  "createbrowser.screen.upload.too_large": "Fichier trop volumineux (max 10 Mo)",
+
+  "createbrowser.compat.all_mods_present": "Tous les mods requis sont installés",
+  "createbrowser.compat.missing_mods": "Manquants : %s",
+
+  "createbrowser.chat.downloaded": "[CreateBrowser] « %s » téléchargé — disponible dans la Schematic Table",
+  "createbrowser.chat.upload_success": "[CreateBrowser] « %s » publié — %s",
+  "createbrowser.chat.upload_error": "[CreateBrowser] Échec de la publication : %s",
+
+  "createbrowser.error.no_api_key": "Clé API manquante — modifiez config/createbrowser-client.toml",
+  "createbrowser.error.no_mod_secret": "Téléchargement indisponible — mod_download_secret non configuré",
+  "createbrowser.error.network": "Erreur réseau",
+  "createbrowser.error.rate_limited": "Limite de requêtes atteinte — attendez un instant",
+  "createbrowser.error.conflict": "Ce schematic existe déjà sur createmod.com",
+
+  "createbrowser.pagination.prev": "< Préc",
+  "createbrowser.pagination.next": "Suiv >"
 }
