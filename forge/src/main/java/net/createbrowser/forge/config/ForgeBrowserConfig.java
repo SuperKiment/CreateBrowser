@@ -24,10 +24,10 @@ public final class ForgeBrowserConfig implements BrowserConfig {
     static {
         BUILDER.push("general");
         API_KEY = BUILDER
-            .comment("API key for createmod.com — get yours at https://createmod.com/settings")
+            .comment("API key for createmod.com (search, detail, download) — generate one at https://createmod.com/settings/api-keys")
             .define("apiKey", "");
         MOD_SECRET = BUILDER
-            .comment("Mod download secret — obtain from the CreateBrowser maintainer")
+            .comment("Optional HMAC mod secret issued by createmod.com — only used for downloads when apiKey is empty")
             .define("modSecret", "");
         BUILDER.pop();
 
@@ -45,8 +45,8 @@ public final class ForgeBrowserConfig implements BrowserConfig {
 
         BUILDER.push("ui");
         PAGE_SIZE = BUILDER
-            .comment("Number of results per page (6-48)")
-            .defineInRange("pageSize", 24, 6, 48);
+            .comment("Results per page; createmod.com accepts 8, 16, 24, 32, 64 or 100 (other values fall back to 24)")
+            .defineInRange("pageSize", 24, 8, 100);
         SHOW_THUMBNAILS = BUILDER
             .comment("Show thumbnail images on result rows and detail screen")
             .define("showThumbnails", true);
