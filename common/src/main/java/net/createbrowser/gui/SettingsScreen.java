@@ -37,7 +37,7 @@ public class SettingsScreen extends Screen {
         apiKeyBox.setMaxLength(128);
         apiKeyBox.setValue(Services.CONFIG.apiKey());
         addRenderableWidget(apiKeyBox);
-        y += 40;
+        y += 50;
 
         modSecretBox = new EditBox(this.font, x, y, fieldWidth, 20,
             Component.translatable("createbrowser.settings.mod_secret"));
@@ -100,6 +100,9 @@ public class SettingsScreen extends Screen {
         graphics.drawString(this.font,
             Component.translatable("createbrowser.settings.api_key"),
             apiKeyBox.getX(), apiKeyBox.getY() - 11, 0xAAAAAA);
+        graphics.drawString(this.font,
+            Component.translatable("createbrowser.settings.api_key_hint"),
+            apiKeyBox.getX(), apiKeyBox.getY() + 24, 0x777777);
         graphics.drawString(this.font,
             Component.translatable("createbrowser.settings.mod_secret"),
             modSecretBox.getX(), modSecretBox.getY() - 11, 0xAAAAAA);

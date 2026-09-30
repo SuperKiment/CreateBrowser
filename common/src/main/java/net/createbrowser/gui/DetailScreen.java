@@ -35,13 +35,13 @@ public class DetailScreen extends Screen {
 
     private SchematicDetail detail;
     private boolean detailLoading = true;
-    private String detailError = null;
+    private Component detailError = null;
 
     private Button downloadButton;
     private Button backButton;
     private Button favoriteButton;
     private DownloadState downloadState = DownloadState.IDLE;
-    private String downloadError = "";
+    private Component downloadError = null;
     private boolean viewRecorded = false;
 
     public DetailScreen(SchematicEntry entry, Screen parent) {
@@ -156,7 +156,7 @@ public class DetailScreen extends Screen {
             err -> {
                 net.createbrowser.Constants.LOG.error("[CreateBrowser] Detail load failed for name='{}': {} — {}",
                     entry.name(), err.getClass().getName(), err.getMessage(), err);
-                this.detailError = err.getMessage();
+                this.detailError = ErrorText.of(err.getMessage());
                 this.detailLoading = false;
             }
         );
@@ -281,9 +281,8 @@ public class DetailScreen extends Screen {
         }
 
         // Download error
-        if (downloadState == DownloadState.ERROR && !downloadError.isEmpty()) {
-            graphics.drawString(this.font,
-                Component.translatable("createbrowser.screen.detail.download_error"),
+        if (downloadState == DownloadState.ERROR && downloadError != null) {
+            graphics.drawString(this.font, downloadError,
                 x, this.height - 48, 0xFF5555);
         }
 
@@ -325,7 +324,7 @@ public class DetailScreen extends Screen {
                 net.createbrowser.Constants.LOG.error("[CreateBrowser] Download failed for name='{}': {} — {}",
                     entry.name(), err.getClass().getName(), err.getMessage(), err);
                 downloadState = DownloadState.ERROR;
-                downloadError = friendlyDownloadError(err.getMessage());
+                downloadError = ErrorText.of(err.getMessage());
                 downloadButton.setMessage(Component.translatable("createbrowser.screen.detail.download_error"));
                 downloadButton.active = true;
             }
@@ -339,13 +338,6 @@ public class DetailScreen extends Screen {
             case ERROR -> Component.translatable("createbrowser.screen.detail.download_error");
             default -> Component.translatable("createbrowser.screen.detail.download");
         };
-    }
-
-    private static String friendlyDownloadError(String raw) {
-        if (raw == null) return "unknown";
-        if (raw.contains("no_mod_secret")) return "no_mod_secret";
-        if (raw.contains("no_api_key") || raw.contains("401")) return "no_api_key";
-        return "network";
     }
 
     @Override

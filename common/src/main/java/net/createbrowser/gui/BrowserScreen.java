@@ -51,6 +51,7 @@ public class BrowserScreen extends Screen {
     private static final int LIST_BOTTOM_MARGIN = 32;
     private static final int PAGINATION_HEIGHT = 28;
     private static final int ITEM_HEIGHT = 36;
+    private static final int FILTER_WIDTH = 120;
     private static final Gson GSON = new Gson();
 
     private final SchematicSource source;
@@ -65,18 +66,20 @@ public class BrowserScreen extends Screen {
     private TabBar<Tab> tabBar;
     private FilterDropdown<SearchFilters.SortMode> sortDropdown;
     private FilterDropdown<String> categoryDropdown;
+    private FilterDropdown<SearchFilters.SizeBucket> sizeDropdown;
     private Button openFolderButton;
 
     private State state = State.IDLE;
     private Tab activeTab = Tab.SEARCH;
-    private String errorMessage = "";
+    private Component errorMessage = Component.empty();
     private List<SchematicEntry> currentResults = List.of();
     private int currentPage = 1;
     private int totalPages = 1;
     private boolean hasPrev = false;
     private boolean hasNext = false;
     private String currentQuery = "";
-    private SearchFilters.SortMode currentSort = SearchFilters.SortMode.RECENT;
+    private SearchFilters.SortMode currentSort = SearchFilters.SortMode.RELEVANCE;
+    private SearchFilters.SizeBucket currentSize = SearchFilters.SizeBucket.ANY;
     private String currentCategory = ALL_CATEGORIES;
     private final List<String> categoryOptions = new ArrayList<>(List.of(ALL_CATEGORIES));
     private List<SchematicEntry> rawResults = List.of();
@@ -120,24 +123,36 @@ public class BrowserScreen extends Screen {
 
         int filtersY = searchY + 24;
         sortDropdown = new FilterDropdown<>(
-            searchX, filtersY, 160, 18,
-            List.of(SearchFilters.SortMode.RECENT, SearchFilters.SortMode.DOWNLOADS,
-                SearchFilters.SortMode.RATING, SearchFilters.SortMode.VIEWS),
+            searchX, filtersY, FILTER_WIDTH, 18,
+            List.of(SearchFilters.SortMode.values()),
             currentSort,
             sortLabel(),
             v -> {
                 currentSort = v;
-                refreshFilteredResults();
+                // Server-side sort spans all pages, so re-query; DOWNLOADS only has a client-side sort.
+                if (v.apiValue() != null && !currentQuery.isBlank()) performSearch(currentQuery, 1);
+                else refreshFilteredResults();
             }
         );
 
         categoryDropdown = new FilterDropdown<>(
-            searchX + 168, filtersY, 160, 18,
+            searchX + FILTER_WIDTH + 8, filtersY, FILTER_WIDTH, 18,
             categoryOptions,
             currentCategory,
             categoryLabel(),
             v -> {
                 currentCategory = v;
+                refreshFilteredResults();
+            }
+        );
+
+        sizeDropdown = new FilterDropdown<>(
+            searchX + 2 * (FILTER_WIDTH + 8), filtersY, FILTER_WIDTH, 18,
+            List.of(SearchFilters.SizeBucket.values()),
+            currentSize,
+            sizeLabel(),
+            v -> {
+                currentSize = v;
                 refreshFilteredResults();
             }
         );
@@ -191,6 +206,7 @@ public class BrowserScreen extends Screen {
         if (activeTab == Tab.SEARCH) {
             sortDropdown.render(graphics, mouseX, mouseY);
             categoryDropdown.render(graphics, mouseX, mouseY);
+            sizeDropdown.render(graphics, mouseX, mouseY);
             if (offline && state == State.RESULTS) {
                 graphics.drawCenteredString(this.font,
                     Component.translatable("createbrowser.screen.offline"),
@@ -222,6 +238,7 @@ public class BrowserScreen extends Screen {
         if (activeTab == Tab.SEARCH) {
             sortDropdown.renderOverlay(graphics, mouseX, mouseY);
             categoryDropdown.renderOverlay(graphics, mouseX, mouseY);
+            sizeDropdown.renderOverlay(graphics, mouseX, mouseY);
         }
     }
 
@@ -236,6 +253,7 @@ public class BrowserScreen extends Screen {
         if (activeTab == Tab.SEARCH) {
             if (sortDropdown.mouseClicked(mouseX, mouseY, button)) return true;
             if (categoryDropdown.mouseClicked(mouseX, mouseY, button)) return true;
+            if (sizeDropdown.mouseClicked(mouseX, mouseY, button)) return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -245,6 +263,7 @@ public class BrowserScreen extends Screen {
         if (keyCode == 256) {
             if (sortDropdown != null && sortDropdown.isOpen()) { sortDropdown.close(); return true; }
             if (categoryDropdown != null && categoryDropdown.isOpen()) { categoryDropdown.close(); return true; }
+            if (sizeDropdown != null && sizeDropdown.isOpen()) { sizeDropdown.close(); return true; }
         }
         if (keyCode == 257 || keyCode == 335) {
             if (searchBar.editBox.isFocused()) {
@@ -303,7 +322,8 @@ public class BrowserScreen extends Screen {
         }
         List<SchematicEntry> filtered = new ArrayList<>(rawResults.size());
         for (SchematicEntry e : rawResults) {
-            if (ALL_CATEGORIES.equals(currentCategory) || e.categories().contains(currentCategory)) {
+            boolean categoryOk = ALL_CATEGORIES.equals(currentCategory) || e.categories().contains(currentCategory);
+            if (categoryOk && currentSize.matches(e.blockCount())) {
                 filtered.add(e);
             }
         }
@@ -311,13 +331,13 @@ public class BrowserScreen extends Screen {
             case DOWNLOADS -> Comparator.comparingInt(SchematicEntry::downloads).reversed();
             case RATING -> Comparator.comparingDouble((SchematicEntry e) -> e.rating()).reversed();
             case VIEWS -> Comparator.comparingInt(SchematicEntry::views).reversed();
-            case RECENT -> null;
+            case RELEVANCE, RECENT -> null;
         };
         if (cmp != null) filtered.sort(cmp);
         currentResults = filtered;
     }
 
-    /** Re-applies category filter and sort to the current page and refreshes the list widget. */
+    /** Re-applies category/size filters and sort to the current page and refreshes the list widget. */
     private void refreshFilteredResults() {
         applyClientSort();
         if (listWidget != null) listWidget.setEntries(currentResults);
@@ -392,7 +412,7 @@ public class BrowserScreen extends Screen {
     private void onTabLoadError(Tab tab, Throwable err) {
         net.createbrowser.Constants.LOG.error("[CreateBrowser] {} tab load failed", tab, err);
         if (activeTab != tab) return;
-        errorMessage = "local";
+        errorMessage = ErrorText.key("local");
         setState(State.ERROR);
     }
 
@@ -464,7 +484,7 @@ public class BrowserScreen extends Screen {
     private void onSearchError(Throwable ex) {
         net.createbrowser.Constants.LOG.error("[CreateBrowser] Search failed for query='{}' page={}: {} — {}",
             currentQuery, currentPage, ex.getClass().getName(), ex.getMessage(), ex);
-        errorMessage = friendlyError(ex.getMessage());
+        errorMessage = ErrorText.of(ex.getMessage());
         setState(State.ERROR);
     }
 
@@ -496,7 +516,7 @@ public class BrowserScreen extends Screen {
             },
             err -> {
                 net.createbrowser.Constants.LOG.error("[CreateBrowser] Local tab load failed", err);
-                errorMessage = "local";
+                errorMessage = ErrorText.key("local");
                 setState(State.ERROR);
             }
         );
@@ -535,14 +555,6 @@ public class BrowserScreen extends Screen {
         };
     }
 
-    private static String friendlyError(String rawMsg) {
-        if (rawMsg == null) return "unknown";
-        if (rawMsg.contains("no_api_key") || rawMsg.contains("http.401")) return "no_api_key";
-        if (rawMsg.contains("http.429")) return "rate_limited";
-        if (rawMsg.contains("http.")) return rawMsg;
-        return "network";
-    }
-
     private static String cacheKey(String query, int page, SearchFilters f) {
         return "search:" + query + "|p=" + page
             + "|sort=" + (f.sort() != null ? f.sort().name() : "-")
@@ -576,6 +588,7 @@ public class BrowserScreen extends Screen {
 
     private static java.util.function.Function<SearchFilters.SortMode, Component> sortLabel() {
         return s -> switch (s) {
+            case RELEVANCE -> Component.translatable("createbrowser.filter.sort.relevance");
             case RECENT -> Component.translatable("createbrowser.filter.sort.recent");
             case DOWNLOADS -> Component.translatable("createbrowser.filter.sort.downloads");
             case RATING -> Component.translatable("createbrowser.filter.sort.rating");
@@ -583,4 +596,7 @@ public class BrowserScreen extends Screen {
         };
     }
 
+    private static java.util.function.Function<SearchFilters.SizeBucket, Component> sizeLabel() {
+        return b -> Component.translatable("createbrowser.filter.size." + b.name().toLowerCase(java.util.Locale.ROOT));
+    }
 }
