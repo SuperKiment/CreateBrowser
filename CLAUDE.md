@@ -79,6 +79,9 @@ createbrowser/
 └── fabric/                            ← Optionnel, même structure
 ```
 
+> État réel : seul `forge/` (1.20.1) existe. Le port NeoForge 1.21.1 se fera sur une branche `mc1.21`
+> (voir `docs/issues/03-port-neoforge-1.21.1.md`). Suivi d'avancement : `STATE.md`.
+
 ### Règle d'isolation absolue
 
 **`common/` n'importe JAMAIS :**
@@ -118,7 +121,7 @@ Toute interaction avec Create passe par l'interface `CreateBridge`. Si Create n'
 - Imports explicites, pas de wildcards (`import java.util.List`, pas `import java.util.*`)
 
 ### Git
-- Branches : `main` (stable), `dev` (développement), `feature/<nom>`, `fix/<nom>`
+- Branches : `master` (stable), `dev` (développement), `feature/<nom>`, `fix/<nom>`
 - Commits : préfixe `[module]` puis description courte en anglais
   - `[api] Add rate limiter with token bucket algorithm`
   - `[gui] Implement search debounce on BrowserScreen`
@@ -172,7 +175,7 @@ dependencies {
 # gradle.properties
 mod_id=createbrowser
 mod_name=CreateBrowser
-mod_version=0.1.0
+mod_version=0.3.0
 mod_group=net.createbrowser
 # NeoForge 1.21.1
 minecraft_version=1.21.1
@@ -197,90 +200,77 @@ registrate_version=MC1.21-1.3.0+67
 
 ## API createmod.com — Référence complète
 
-Base URL : `https://createmod.com/api`
-Auth : header `X-API-Key: <clé>`
-Format réponse : JSON
+Source de vérité : le code serveur, public (MIT) sur https://github.com/uberswe/createmod.com
+(`internal/router/main.go`, `internal/pages/api_public.go`, `internal/pages/api_schematic_download.go`,
+`internal/models/schematic.go`). L'OpenAPI servie sur `/api/openapi.json` (`internal/pages/api_openapi.go`)
+est utile mais partiellement en retard sur le code : en cas de doute, lire le handler.
 
-### Endpoints
+Base URL : `https://createmod.com`
 
-#### Recherche
-```
-GET /api/schematics?query=<terme>&page=<n>&pageSize=24
-```
-Réponse :
+### Authentification
+
+| Mode | Headers | Obtention | Rate limit |
+|---|---|---|---|
+| Clé API | `X-API-Key: <clé>` (ou `?api_key=`) | Self-service : https://createmod.com/settings/api-keys (compte requis) | 120 req/min par clé (défaut) |
+| HMAC mod | `X-Mod-Message` + `X-Mod-Signature` | Secret émis par uberswe (secrets « admin-managed ») | 100 req/min par IP |
+
+HMAC : message `timestamp:modversion:mcusername:identifier`, signature = hex(HMAC-SHA256(message, secret)),
+timestamp à ±5 min. Ne JAMAIS réutiliser le secret d'un autre mod (ex. Create: Schematic Helper).
+
+### Endpoints utilisés par le mod
+
+| Endpoint | Auth | Usage |
+|---|---|---|
+| `GET /api/schematics` | clé ou HMAC | Recherche / liste |
+| `GET /api/schematics/{name}` | clé ou HMAC | Détail |
+| `GET /api/schematics/{name}/download` | clé ou HMAC | 302 vers `/api/files/schematics/{id}/{fichier}.nbt` — téléchargement principal |
+| `POST /api/mod/download` | HMAC seulement | `.nbt` XOR-v1 (header `X-Mod-Encoding`) — repli si seul `modSecret` est configuré |
+| `POST /api/schematics/upload-anonymous` | aucune | Upload anonyme (multipart `file`) |
+
+Disponibles, non utilisés : `GET /api/schematics/filters` (options de filtres), `GET /api/home` (rails),
+`POST /api/schematics/upload` (upload authentifié), `GET /api/schematics/{name}/comments`, `/stats`.
+
+### Recherche — paramètres
+
+`query` (alias `q`), `page` (commence à **1**), `per_page` ∈ {8, 16, 24, 32, 64, 100} (sinon 24),
+`sort` numérique : 1 pertinence, 2 récents, 3 anciens, 4 mieux notés, 5 moins bien notés, 6 plus vus,
+7 moins vus, 8 trending. Sans `query` ni `sort` : trending. Filtres : `category` (clé), `tag` (clés, virgules),
+`mcv`, `cv` (ou `~6.0`), `rating` (min 0-5), `mod` répétable / `mods`.
+Pas de tri serveur par téléchargements, pas de filtre serveur par taille.
+
+Réponse : `{items, page, pageSize, hasPrev, hasNext, total, totalPages, term}`.
+
+### Objet schematic (`models.Schematic`, liste et détail)
+
 ```json
 {
-  "items": [
-    {
-      "name": "windmill-farm",           // identifiant URL-safe
-      "title": "Windmill Farm",
-      "author": "builder123",
-      "views": 1500,
-      "downloads": 320,
-      "rating": 4.5,
-      "images": ["https://..."],
-      "categories": ["automation"],
-      "tags": ["windmill", "farm"]
-    }
-  ],
-  "page": 1,
-  "pageSize": 24,
-  "hasPrev": false,
-  "hasNext": true,
-  "total": 48,
-  "term": "windmill"
+  "id": "abc123", "name": "windmill-farm", "title": "Windmill Farm",
+  "author": {"id": "...", "username": "builder123", "avatar": "", "hasAvatar": false},
+  "content": "texte", "excerpt": "court", "aiDescription": "",
+  "featuredImage": "cover.png", "gallery": ["cover.png", "side.png"],
+  "categories": [{"id": "...", "key": "farms", "name": "Farms"}],
+  "tags": [{"id": "...", "key": "windmill", "name": "Windmill"}],
+  "views": 1500, "downloads": 320, "rating": "4.5", "ratingCount": 12,
+  "blockCount": 450, "dimX": 15, "dimY": 20, "dimZ": 15,
+  "materials": "[{\"block_id\":\"create:shaft\",\"count\":12}]",
+  "mods": ["create"], "createmodVersion": "6.0.8", "minecraftVersion": "1.20.1",
+  "shortCode": "aB3dE"
 }
 ```
 
-#### Détail
-```
-GET /api/schematics/<name>
-```
-Réponse :
-```json
-{
-  "name": "windmill-farm",
-  "title": "Windmill Farm",
-  "author": "builder123",
-  "description": "A beautiful windmill farm...",
-  "views": 1500,
-  "downloads": 320,
-  "rating": 4.5,
-  "images": ["https://..."],
-  "categories": ["automation"],
-  "tags": ["windmill", "farm"],
-  "materials": [
-    {"block_id": "create:shaft", "name": "Shaft", "count": 12}
-  ],
-  "mods": ["create"],
-  "dimensions": {"x": 15, "y": 20, "z": 15},
-  "block_count": 450
-}
-```
+Pièges :
+- `rating` est une **string** formatée `%.1f`.
+- `materials` est une **string JSON** ; les entrées n'ont souvent que `block_id` + `count`.
+- Images = noms de fichiers : URL = `https://createmod.com/api/files/schematics/{id}/{fichier encodé}`.
+  `?thumb=WxH` renvoie du WebP, non décodable par `NativeImage`.
+- Les modèles Java acceptent aussi les anciens noms (`images`, `block_count`, `dimensions{x,y,z}`, `description`).
 
-#### Upload
-```
-POST /api/schematics/upload
-Content-Type: multipart/form-data
-Header: X-API-Key: <clé>
-Body: file=<fichier .nbt>
-```
-Réponse :
-```json
-{
-  "token": "abc123",
-  "url": "https://createmod.com/schematics/my-schematic"
-}
-```
+### Contraintes
 
-#### Téléchargement du fichier .nbt
-Le fichier .nbt est téléchargeable via le lien direct depuis les métadonnées du schematic. L'URL exacte est à extraire de la page de détail ou de l'API (champ à confirmer — probablement `https://createmod.com/schematics/<name>/download` ou un lien S3).
-
-### Contraintes de l'API
-- Rate limit : non documenté précisément, mais la politique interdit le bulk downloading
-- Le mod doit s'auto-limiter : max 2 requêtes/seconde
-- User-Agent obligatoire : `CreateBrowser/<version> Minecraft/<mc_version>`
-- Ne pas construire de "plateforme concurrente" — le mod est un client, pas un mirror
+- Politique createmod.com : pas de bulk download, pas de plateforme concurrente — le mod est un client, pas un mirror.
+- Le mod s'auto-limite à `network.maxRequestsPerSecond` (2 par défaut).
+- User-Agent : `CreateBrowser/<version> Minecraft/<mc_version>`.
+- createmod.com est derrière Cloudflare : requêtes depuis des IP cloud/CI souvent refusées (403). Tests réseau = en jeu.
 
 ---
 
@@ -304,9 +294,9 @@ Le fichier .nbt est téléchargeable via le lien direct depuis les métadonnées
 Les noms de packages peuvent varier entre versions de Create. Vérifier dans le source de la version ciblée.
 
 ```
-com.simibubi.create.content.schematics.SchematicTableScreen
-com.simibubi.create.content.schematics.SchematicTableMenu
-com.simibubi.create.content.schematics.SchematicAndQuillHandler
+com.simibubi.create.content.schematics.table.SchematicTableScreen   ← cible du Mixin (0.5.1 et 6.x)
+com.simibubi.create.content.schematics.table.SchematicTableMenu
+com.simibubi.create.content.schematics.client.SchematicAndQuillHandler
 com.simibubi.create.content.schematics.SchematicItem
 ```
 
@@ -490,145 +480,87 @@ Les fichiers JSON sont lus/écrits via Gson. Le cache utilise un TTL configurabl
 
 ## CreateBridge — Interface d'abstraction
 
+Chargée par SPI (`META-INF/services/net.createbrowser.compat.CreateBridge`) via `Services.CREATE`,
+avec repli `CreateBridge.NOOP`. Le bouton de la Schematic Table est injecté par Mixin, pas par le bridge.
+
 ```java
-// Dans common/
+// common/ — net.createbrowser.compat.CreateBridge
 public interface CreateBridge {
-    /** Le mod Create est-il chargé ? */
     boolean isCreateLoaded();
-
-    /** Version de Create installée (ex: "6.0.10"), ou null */
-    @Nullable String getCreateVersion();
-
-    /** Liste les mods Create-addons installés */
-    List<String> getInstalledCreateAddons();
-
-    /** Ouvre le BrowserScreen depuis un bouton ajouté à la SchematicTableScreen */
-    void injectBrowseButton();
-
-    /** Instance no-op pour quand Create n'est pas installé */
-    CreateBridge NOOP = new CreateBridge() {
-        public boolean isCreateLoaded() { return false; }
-        public String getCreateVersion() { return null; }
-        public List<String> getInstalledCreateAddons() { return List.of(); }
-        public void injectBrowseButton() { /* no-op */ }
-    };
+    String getCreateVersion();               // null si absent
+    List<String> getInstalledCreateAddons(); // mods déclarant une dépendance à "create"
+    CreateBridge NOOP = ...;
 }
 ```
 
-```java
-// Dans neoforge/
-public class CreateBridgeNeoForge implements CreateBridge {
-    @Override
-    public boolean isCreateLoaded() {
-        return ModList.get().isLoaded("create");
-    }
-
-    @Override
-    public String getCreateVersion() {
-        return ModList.get().getModContainerById("create")
-            .map(c -> c.getModInfo().getVersion().toString())
-            .orElse(null);
-    }
-
-    @Override
-    public List<String> getInstalledCreateAddons() {
-        // Détecter les mods qui dépendent de Create
-        return ModList.get().getMods().stream()
-            .filter(info -> info.getDependencies().stream()
-                .anyMatch(dep -> dep.getModId().equals("create")))
-            .map(info -> info.getModId())
-            .toList();
-    }
-
-    @Override
-    public void injectBrowseButton() {
-        // Fait via Mixin sur SchematicTableScreen — voir mixin/
-    }
-}
-```
+Implémentation : `forge/.../CreateBridgeForge.java` (`ModList`). Autres services SPI du même modèle :
+`BrowserConfig` (config), `ChatNotifier` (messages chat), `IPlatformHelper` (mods chargés, environnement).
 
 ---
 
 ## Mixin SchematicTableScreen
 
-Le seul Mixin du projet. Ajoute un bouton "Browse Online" dans le GUI de la Schematic Table de Create.
+Le seul Mixin du projet. Ajoute un bouton « Browse Online » dans le GUI de la Schematic Table de Create.
 
 ```java
-// Dans neoforge/mixin/SchematicTableScreenMixin.java
-@Mixin(targets = "com.simibubi.create.content.schematics.SchematicTableScreen")
+// forge/src/main/java/net/createbrowser/forge/mixin/SchematicTableScreenMixin.java
+@Mixin(targets = "com.simibubi.create.content.schematics.table.SchematicTableScreen", remap = false)
 public abstract class SchematicTableScreenMixin extends Screen {
-    protected SchematicTableScreenMixin(Component title) { super(title); }
-
-    @Inject(method = "init", at = @At("TAIL"))
-    private void createbrowser$addBrowseButton(CallbackInfo ci) {
-        this.addRenderableWidget(Button.builder(
-            Component.translatable("createbrowser.button.browse"),
-            btn -> Minecraft.getInstance().setScreen(new BrowserScreen())
-        ).bounds(this.width / 2 + 60, this.height / 2 - 30, 80, 20).build());
-    }
+    @Inject(method = {"init", "m_7856_"}, at = @At("TAIL"), remap = false)
+    private void createbrowser$addBrowseButton(CallbackInfo ci) { ... }
 }
 ```
 
-**Fichier mixin config** (`createbrowser.mixins.json` dans resources/) :
+**Pourquoi deux noms** : Forge 1.20.1 tourne en noms SRG en production (`Screen.init()` = `m_7856_`) et en
+noms Mojang en dev. Aucun refmap n'est généré (Create absent du classpath de compilation), donc la cible
+doit lister les deux. Sur NeoForge 1.21.1 (noms Mojang partout), `"init"` suffit.
+
+**Fichier mixin config** (`forge/src/main/resources/createbrowser.mixins.json`) :
 ```json
 {
   "required": false,
-  "package": "net.createbrowser.neoforge.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "package": "net.createbrowser.forge.mixin",
+  "compatibilityLevel": "JAVA_17",
   "client": ["SchematicTableScreenMixin"],
   "injectors": { "defaultRequire": 0 }
 }
 ```
 
-Le `"required": false` et `"defaultRequire": 0` sont essentiels : si Create n'est pas installé ou si la classe cible a changé, le mixin échoue silencieusement au lieu de crasher.
+`"required": false` et `"defaultRequire": 0` : si Create est absent ou si la classe a changé, le mixin échoue
+silencieusement au lieu de crasher. Revers : un mauvais nom de méthode ne produit AUCUNE erreur — tester le
+jar de production, pas seulement `runClient`.
 
 ---
 
 ## Configuration
 
-Fichier : `<instance>/config/createbrowser-client.toml`
+Fichier : `<instance>/config/createbrowser-client.toml` (`forge/.../config/ForgeBrowserConfig.java`,
+exposé à `common/` via l'interface `BrowserConfig`). `apiKey`, `modSecret` et `showThumbnails` sont
+éditables en jeu (`SettingsScreen`) et pris en compte sans redémarrage.
 
 ```toml
 [general]
-    # Clé API pour createmod.com (obtenue sur le site)
+    # Clé API createmod.com (recherche, détail, téléchargement) — https://createmod.com/settings/api-keys
     apiKey = ""
-    # Chemin du dossier schematics (auto-détecté si vide)
-    schematicsPath = ""
-
-[cache]
-    # Taille max du cache en MB
-    maxSizeMB = 50
-    # TTL des résultats de recherche en minutes
-    searchTtlMinutes = 15
-    # TTL des pages de détail en minutes
-    detailTtlMinutes = 60
+    # Secret HMAC optionnel émis par createmod.com — utilisé seulement si apiKey est vide
+    modSecret = ""
 
 [network]
-    # Timeout des requêtes HTTP en secondes
-    timeoutSeconds = 10
-    # Max requêtes par seconde par source
-    maxRequestsPerSecond = 2
-    # Nombre max de retries
-    maxRetries = 3
-
-[sources]
-    # Sources actives (ordre = priorité)
-    active = ["createmod.com", "local"]
+    timeoutSeconds = 10        # 1-60
+    maxRequestsPerSecond = 2   # 1-10
+    maxRetries = 3             # 0-10, retries sur 5xx
 
 [ui]
-    # Nombre de résultats par page
-    pageSize = 24
-    # Afficher les thumbnails
+    pageSize = 24              # 8, 16, 24, 32, 64 ou 100 (autre valeur → 24 côté serveur)
     showThumbnails = true
-    # Activer la preview 3D (Phase 5)
-    enable3dPreview = false
+
+[cache]
+    maxSizeMB = 50
+    searchTtlMinutes = 15
+    detailTtlMinutes = 60
 ```
 
-Enregistrement NeoForge :
-```java
-// Dans CreateBrowserNeoForge.java
-container.registerConfig(ModConfig.Type.CLIENT, BrowserConfig.SPEC);
-```
+Non implémentés (voir `docs/issues/`) : `schematicsPath`, `sources.active`, `ui.enable3dPreview`.
 
 ---
 
@@ -638,51 +570,9 @@ Fichiers dans `assets/createbrowser/lang/`.
 
 ### Clés de traduction
 
-```json
-{
-  "key.createbrowser.open": "Open Schematic Browser",
-  "key.categories.createbrowser": "CreateBrowser",
-  "createbrowser.button.browse": "Browse Online",
-  "createbrowser.screen.title": "Schematic Browser",
-  "createbrowser.screen.search.placeholder": "Search schematics...",
-  "createbrowser.screen.search.loading": "Searching...",
-  "createbrowser.screen.search.no_results": "No schematics found",
-  "createbrowser.screen.search.error": "Search failed: %s",
-  "createbrowser.screen.detail.title": "Schematic Details",
-  "createbrowser.screen.detail.dimensions": "Size: %dx%dx%d",
-  "createbrowser.screen.detail.blocks": "%d blocks",
-  "createbrowser.screen.detail.materials": "Materials",
-  "createbrowser.screen.detail.mods_required": "Required Mods",
-  "createbrowser.screen.detail.mod_installed": "Installed",
-  "createbrowser.screen.detail.mod_missing": "Missing",
-  "createbrowser.screen.detail.download": "Download",
-  "createbrowser.screen.detail.downloading": "Downloading...",
-  "createbrowser.screen.detail.downloaded": "Downloaded!",
-  "createbrowser.screen.detail.download_error": "Download failed",
-  "createbrowser.screen.detail.publish": "Publish",
-  "createbrowser.screen.tabs.search": "Search",
-  "createbrowser.screen.tabs.favorites": "Favorites",
-  "createbrowser.screen.tabs.history": "History",
-  "createbrowser.screen.tabs.local": "My Schematics",
-  "createbrowser.screen.local.rename": "Rename",
-  "createbrowser.screen.local.delete": "Delete",
-  "createbrowser.screen.local.delete_confirm": "Delete '%s'? This cannot be undone.",
-  "createbrowser.screen.settings": "Settings",
-  "createbrowser.screen.offline": "Offline — showing cached results",
-  "createbrowser.chat.downloaded": "[CreateBrowser] '%s' downloaded — available in the Schematic Table",
-  "createbrowser.chat.upload_success": "[CreateBrowser] '%s' uploaded — %s",
-  "createbrowser.chat.upload_error": "[CreateBrowser] Upload failed: %s",
-  "createbrowser.compat.all_mods_present": "All required mods installed",
-  "createbrowser.compat.missing_mods": "Missing mods: %s",
-  "createbrowser.filter.category": "Category",
-  "createbrowser.filter.size": "Size",
-  "createbrowser.filter.sort": "Sort by",
-  "createbrowser.filter.sort.recent": "Most recent",
-  "createbrowser.filter.sort.downloads": "Most downloaded",
-  "createbrowser.filter.sort.rating": "Highest rated",
-  "createbrowser.filter.sort.views": "Most viewed"
-}
-```
+Source de vérité : `common/src/main/resources/assets/createbrowser/lang/en_us.json`. Toute clé ajoutée
+doit l'être dans `en_us.json` ET `fr_fr.json`. Les erreurs affichées passent par `gui/ErrorText`
+(`createbrowser.error.<code>`).
 
 ---
 
@@ -725,31 +615,11 @@ common/src/test/java/net/createbrowser/
 
 ### GitHub Actions
 
-```yaml
-# .github/workflows/build.yml
-name: Build
-on: [push, pull_request]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'microsoft'
-      - name: Build
-        run: ./gradlew build
-      - name: Test
-        run: ./gradlew test
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: jars
-          path: |
-            neoforge/build/libs/*.jar
-            forge/build/libs/*.jar
-```
+`.github/workflows/build.yml` : push sur `master`/`dev` et PR vers `master`, JDK 17 Temurin,
+`./gradlew build` (inclut les tests), artefact `forge/build/libs/*.jar`.
+
+`ConstantsTest` vérifie que `Constants.MOD_VERSION` / `MC_VERSION` correspondent à `gradle.properties` :
+bumper les deux ensemble.
 
 ---
 
@@ -792,6 +662,9 @@ Livrable : tests, documentation, publication Modrinth/CurseForge.
 8. **Utiliser `net.minecraftforge` dans le sous-projet NeoForge** → les packages ont changé en `net.neoforged`.
 9. **Dépendre d'un jar non-release de Create** → le code peut ne pas exister dans la version release que les utilisateurs installent.
 10. **Passer le curseur de recherche comme `page=0`** → l'API createmod.com utilise `page=1` comme première page.
+11. **Cibler une méthode vanilla dans un Mixin avec `remap = false`** sur Forge 1.20.1 → introuvable en production (noms SRG). Lister aussi le nom SRG.
+12. **Se fier à l'OpenAPI ou à un exemple JSON inventé** → vérifier le handler dans `uberswe/createmod.com`. Les paramètres `pageSize` et `sort=recent` étaient silencieusement ignorés.
+13. **Réutiliser le secret HMAC d'un autre mod** → usurpation ; demander un secret dédié (voir `docs/issues/02-partenariat-createmod.md`).
 
 ---
 
@@ -806,7 +679,9 @@ Livrable : tests, documentation, publication Modrinth/CurseForge.
 | Create Wiki — Developers | https://wiki.createmod.net/developers/ |
 | Create — Depend NeoForge 1.21.1 | https://wiki.createmod.net/developers/depend-on-create/neoforge-1.21.1 |
 | Create Maven | https://maven.createmod.net |
-| createmod.com API | https://createmod.com/api |
+| createmod.com API (OpenAPI) | https://createmod.com/api/openapi.json |
+| createmod.com — clés API | https://createmod.com/settings/api-keys |
+| createmod.com — contact / Discord uberswe | https://createmod.com/contact · https://discord.gg/NQJuhb6stv |
 | createmod.com GitHub | https://github.com/uberswe/createmod.com |
 | CreateSchematicUpload (référence) | https://github.com/uberswe/CreateSchematicUpload |
 | LitematicDownloader (modèle UX) | https://modrinth.com/mod/litematicdownloader |

@@ -4,20 +4,23 @@ Mod Minecraft client-side qui ajoute un navigateur de schematics in-game pour le
 
 - **Mod ID** : `createbrowser`
 - **Minecraft** : 1.20.1
-- **Loader** : Forge `47.2.30+` (NeoForge prévu en Phase 4+)
+- **Loader** : Forge `47.x` (NeoForge 1.21.1 prévu, voir `docs/issues/03-port-neoforge-1.21.1.md`)
 - **Java** : 17
 - **Licence** : MIT
 
-## Fonctionnalités (Phase 1)
+## Fonctionnalités
 
 - Touche `N` ouvre le navigateur in-game
-- Recherche createmod.com avec pagination, debounce et états (loading / empty / error)
-- Page de détail (dimensions, block count, mods requis avec badges installé/manquant)
+- Recherche createmod.com : pagination, tri serveur (pertinence, récents, notes, vues), filtres catégorie et taille
+- Page de détail : dimensions, nombre de blocs, matériaux, mods requis avec badges installé/manquant
 - Téléchargement `.nbt` vers `<instance>/schematics/`, immédiatement utilisable dans la Schematic Table de Create
-- Notification chat de confirmation
-- Configuration TOML Forge, i18n FR + EN
+- Favoris, historique, gestion des fichiers locaux (renommer, supprimer, ouvrir le dossier)
+- Publication anonyme vers createmod.com, partage de lien
+- Bouton « Browse Online » dans la Schematic Table de Create (si Create est installé)
+- Cache disque avec mode hors-ligne, paramètres in-game, FR + EN
 
-> Le téléchargement nécessite un `mod_download_secret` partagé fourni par le mainteneur de createmod.com (uberswe). Sans ce secret, recherche et détail restent fonctionnels avec une simple clé API.
+Recherche, détail et téléchargement nécessitent une **clé API createmod.com gratuite**, générée sur
+https://createmod.com/settings/api-keys (compte requis).
 
 ## Architecture
 
@@ -37,7 +40,7 @@ forge/    ← Bootstrap Forge : @Mod, keybind, ModConfig TOML, services SPI
 | Package | Rôle |
 |---|---|
 | `api/` | Client HTTP `java.net.http.HttpClient`, rate limiter token-bucket, retry exponentiel sur 5xx |
-| `api/source/` | Interface `SchematicSource` + implémentation `CreateModComSource` |
+| `api/source/` | Interface `SchematicSource`, `CreateModComSource`, `LocalSource`, `SourceRegistry` |
 | `api/model/` | DTO Gson immuables |
 | `gui/` | `BrowserScreen`, `DetailScreen` et widgets vanilla MC (pas de framework GUI tiers) |
 | `storage/` | Écriture des `.nbt` dans `<instance>/schematics/` avec validation header GZip et résolution de conflits de nom |
@@ -63,7 +66,7 @@ Aucune I/O réseau ou disque sur le game thread. Tout passe par `AsyncExecutor.r
 - JUnit Jupiter `5.10.0`
 - Mockito Core `5.7.0`
 
-**Compile-only** : Forge `47.2.30` (1.20.1).
+**Compile-only** : Forge `47.4.2` (1.20.1).
 
 ## Compilation
 
@@ -80,23 +83,23 @@ Prérequis : **JDK 17** (Temurin recommandé).
 ./gradlew :forge:runClient
 ```
 
-Artefact produit : `forge/build/libs/createbrowser-forge-1.20.1-0.2.0.jar`.
+Artefact produit : `forge/build/libs/createbrowser-forge-1.20.1-0.3.0.jar`.
 
-CI GitHub Actions configurée dans `.github/workflows/build.yml` (déclenchée sur push `main`/`dev` et pull requests).
+CI GitHub Actions configurée dans `.github/workflows/build.yml` (push sur `master`/`dev`, pull requests vers `master`).
 
 ## Installation
 
-1. Télécharger `createbrowser-forge-1.20.1-0.2.0.jar` depuis les releases (ou builder localement, voir ci-dessus).
+1. Télécharger `createbrowser-forge-1.20.1-0.3.0.jar` depuis les releases (ou builder localement, voir ci-dessus).
 2. Le placer dans `<instance Minecraft>/mods/`.
-3. Avoir Forge `47.2.30+` pour MC 1.20.1.
+3. Avoir Forge `47.x` pour MC 1.20.1.
 4. Le mod [Create](https://www.curseforge.com/minecraft/mc-mods/create) est **optionnel** — sans Create, le navigateur reste utilisable et écrit dans `schematics/` (utile pour Litematica ou d'autres mods compatibles avec ce format).
-5. Premier lancement → ouvrir une fois le menu pour créer `<instance>/config/createbrowser-client.toml`.
-6. Renseigner la clé API obtenue sur createmod.com :
+5. En jeu, taper `N`, cliquer ⚙ et coller la clé API createmod.com (https://createmod.com/settings/api-keys).
+   Elle est enregistrée dans `<instance>/config/createbrowser-client.toml` et prise en compte immédiatement.
 
 ```toml
 [general]
 apiKey = "votre-clé-api"
-modSecret = ""    # optionnel — fourni par uberswe pour activer les downloads
+modSecret = ""    # optionnel — secret HMAC émis par createmod.com, utilisé seulement sans apiKey
 
 [network]
 timeoutSeconds = 10
@@ -104,27 +107,35 @@ maxRequestsPerSecond = 2
 maxRetries = 3
 
 [ui]
-pageSize = 24
+pageSize = 24     # 8, 16, 24, 32, 64 ou 100
 ```
 
-7. En jeu, taper `N` pour ouvrir le navigateur. La touche est rebindable dans Options → Controls → CreateBrowser.
+6. La touche est rebindable dans Options → Controls → CreateBrowser.
 
-## Phases de développement
+## État et suite du projet
 
-Voir `CLAUDE.md` pour la roadmap détaillée.
+- Avancement détaillé : `STATE.md`
+- Chantiers ouverts (prêts à devenir des issues GitHub) : `docs/issues/`
+- Conventions et référence API : `CLAUDE.md`
 
 | Phase | Statut | Livrable |
 |---|---|---|
 | 0 — Setup | ✅ | Mod compilable, keybind, écran vide |
 | 1 — Navigateur de base | ✅ | Recherche → détail → download `.nbt` |
-| 2 — Enrichissement | ⏳ | Filtres, thumbnails, favoris, historique |
-| 3 — Upload + intégration Create | ⏳ | Bouton dans Schematic Table (Mixin), upload |
-| 4 — Multi-sources | ⏳ | Cache disque, mode hors-ligne, NeoForge |
-| 5 — Preview 3D, Quick-Share | ⏳ | |
-| 6 — Polish | ⏳ | Publication Modrinth/CurseForge |
+| 2 — Enrichissement | ✅ | Filtres, thumbnails, favoris, historique, fichiers locaux |
+| 3 — Upload + intégration Create | ✅ | Upload anonyme, bouton Schematic Table (Mixin), badges mods |
+| 4 — Multi-sources | 🟡 | Cache + hors-ligne faits ; 2e source réseau et NeoForge restants |
+| 5 — Preview 3D, Quick-Share, i18n | 🟡 | Quick-share + FR/EN faits ; preview 3D restante |
+| 6 — Polish | ⏳ | Validation in-game, publication Modrinth/CurseForge |
+
+## Projets similaires
+
+- [Create: Schematic Helper](https://modrinth.com/project/vDsPXWBh) (uberswe, ARR) : upload automatique vers createmod.com et téléchargement par URL / short code dans la Schematic Table. Pas de recherche ni de navigation.
+- [Create: Schematics+](https://modrinth.com/mod/schematic) (Fabric 1.20.1, abandonné) : dossiers locaux dans la Schematic Table.
 
 ## Liens
 
-- Source createmod.com : https://github.com/uberswe/createmod.com
+- Source createmod.com (référence API) : https://github.com/uberswe/createmod.com
+- Clés API createmod.com : https://createmod.com/settings/api-keys
 - Wiki Create — Developers : https://wiki.createmod.net/developers/
 - MultiLoader Template : https://github.com/jaredlll08/MultiLoader-Template
