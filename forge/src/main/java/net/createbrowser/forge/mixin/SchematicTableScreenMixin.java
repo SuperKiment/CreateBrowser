@@ -13,6 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Injects a "Browse Online" button into Create's SchematicTableScreen.
  * required=false — fails silently if Create is absent or the class is renamed.
+ * No refmap is generated (Create is not on the compile classpath), so the vanilla {@code init()} override is
+ * targeted by both its Mojang name (dev runtime) and its SRG name {@code m_7856_} (Forge 1.20.1 production).
  */
 @Mixin(targets = "com.simibubi.create.content.schematics.table.SchematicTableScreen", remap = false)
 public abstract class SchematicTableScreenMixin extends Screen {
@@ -21,7 +23,7 @@ public abstract class SchematicTableScreenMixin extends Screen {
         super(title);
     }
 
-    @Inject(method = "init", at = @At("TAIL"), remap = false)
+    @Inject(method = {"init", "m_7856_"}, at = @At("TAIL"), remap = false)
     private void createbrowser$addBrowseButton(CallbackInfo ci) {
         this.addRenderableWidget(Button.builder(
             Component.translatable("createbrowser.button.browse"),
