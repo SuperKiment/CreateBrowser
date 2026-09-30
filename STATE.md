@@ -43,19 +43,18 @@ Audit du client contre le code source de createmod.com (`uberswe/createmod.com`)
 
 ## Restant (par priorité)
 
-| # | Chantier | Fichier | Bloquant |
+| # | Chantier | Issue / fichier | Bloquant |
 |---|---|---|---|
-| 1 | Validation in-game (checklist) | `docs/issues/01-validation-in-game.md` | Oui — tout le reste |
-| 2 | Partenariat createmod.com (secret HMAC dédié, accord, PNG thumbs) | `docs/issues/02-partenariat-createmod.md` | Pour publication |
-| 3 | Port NeoForge 1.21.1 (branche `mc1.21`) | `docs/issues/03-port-neoforge-1.21.1.md` | Non |
-| 4 | Filtres serveur + trending à l'ouverture | `docs/issues/04-filtres-serveur-et-browse.md` | Non |
-| 5 | Vignettes WebP/JPEG | `docs/issues/05-vignettes-webp.md` | Non |
-| 6 | Preview 3D | `docs/issues/06-preview-3d.md` | Non |
-| 7 | 2e source réseau | `docs/issues/07-deuxieme-source.md` | Non |
-| 8 | Publication Modrinth/CurseForge | `docs/issues/08-publication.md` | Après 1 et 2 |
+| 1 | Validation in-game (checklist) | [#1](https://github.com/SuperKiment/CreateBrowser/issues/1) · `docs/issues/01-validation-in-game.md` | Oui — tout le reste |
+| 2 | Partenariat createmod.com (secret HMAC dédié, accord, PNG thumbs) | [#2](https://github.com/SuperKiment/CreateBrowser/issues/2) · `docs/issues/02-partenariat-createmod.md` | Pour publication |
+| 3 | Port NeoForge 1.21.1 (branche `mc1.21`) | [#3](https://github.com/SuperKiment/CreateBrowser/issues/3) · `docs/issues/03-port-neoforge-1.21.1.md` | Non |
+| 4 | Filtres serveur + trending à l'ouverture | [#4](https://github.com/SuperKiment/CreateBrowser/issues/4) · `docs/issues/04-filtres-serveur-et-browse.md` | Non |
+| 5 | Vignettes WebP/JPEG | [#5](https://github.com/SuperKiment/CreateBrowser/issues/5) · `docs/issues/05-vignettes-webp.md` | Non |
+| 6 | Preview 3D | [#6](https://github.com/SuperKiment/CreateBrowser/issues/6) · `docs/issues/06-preview-3d.md` | Non |
+| 7 | 2e source réseau | [#7](https://github.com/SuperKiment/CreateBrowser/issues/7) · `docs/issues/07-deuxieme-source.md` | Non |
+| 8 | Publication Modrinth/CurseForge | [#8](https://github.com/SuperKiment/CreateBrowser/issues/8) · `docs/issues/08-publication.md` | Après 1 et 2 |
 
-Les fichiers `docs/issues/*.md` sont rédigés pour être copiés tels quels en issues GitHub
-(titre = première ligne).
+Les issues GitHub #1 à #8 reprennent `docs/issues/*.md` (même numérotation). Le fichier garde le détail complet.
 
 ## Contraintes connues
 
