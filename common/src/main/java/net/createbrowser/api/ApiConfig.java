@@ -3,27 +3,9 @@ package net.createbrowser.api;
 import net.createbrowser.Constants;
 import net.createbrowser.config.BrowserConfig;
 
-/** Immutable snapshot of configuration values needed by the API layer. */
-public final class ApiConfig {
-
-    private final String apiKey;
-    private final String modSecret;
-    private final String modVersion;
-    private final String mcVersion;
-    private final int timeoutSec;
-    private final int maxRetries;
-    private final int maxReqPerSec;
-
-    public ApiConfig(String apiKey, String modSecret, String modVersion, String mcVersion,
-                     int timeoutSec, int maxRetries, int maxReqPerSec) {
-        this.apiKey = apiKey;
-        this.modSecret = modSecret;
-        this.modVersion = modVersion;
-        this.mcVersion = mcVersion;
-        this.timeoutSec = timeoutSec;
-        this.maxRetries = maxRetries;
-        this.maxReqPerSec = maxReqPerSec;
-    }
+/** Immutable snapshot of configuration values needed by the API layer; value-equal so callers can detect changes. */
+public record ApiConfig(String apiKey, String modSecret, String modVersion, String mcVersion,
+                        int timeoutSec, int maxRetries, int maxReqPerSec) {
 
     public static ApiConfig fromBrowserConfig(BrowserConfig cfg) {
         return new ApiConfig(
@@ -37,13 +19,11 @@ public final class ApiConfig {
         );
     }
 
-    public String apiKey() { return apiKey; }
-    public String modSecret() { return modSecret; }
-    public String modVersion() { return modVersion; }
-    public String mcVersion() { return mcVersion; }
-    public int timeoutSec() { return timeoutSec; }
-    public int maxRetries() { return maxRetries; }
-    public int maxReqPerSec() { return maxReqPerSec; }
+    /** Redacts credentials so an accidental log line never leaks them. */
+    @Override
+    public String toString() {
+        return "ApiConfig[" + userAgent() + ", timeoutSec=" + timeoutSec + "]";
+    }
 
     public String userAgent() {
         return "CreateBrowser/" + modVersion + " Minecraft/" + mcVersion;

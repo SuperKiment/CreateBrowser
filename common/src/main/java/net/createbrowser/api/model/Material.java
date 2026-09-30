@@ -12,11 +12,12 @@ public final class Material {
     Material() {}
 
     public String blockId() { return blockId; }
-    public String name() { return name; }
+    /** Display name; falls back to the block id since createmod.com often omits the name. */
+    public String name() { return name != null && !name.isEmpty() ? name : blockId; }
     public int count() { return count; }
 
     @Override
     public String toString() {
-        return count + "x " + name;
+        return count + "x " + name();
     }
 }
