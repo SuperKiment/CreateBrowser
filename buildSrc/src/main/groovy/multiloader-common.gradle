@@ -58,6 +58,15 @@ repositories {
     }
 }
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
 sourcesJar {
     from(rootProject.file('LICENSE')) {
         rename { "${it}_${mod_name}" }

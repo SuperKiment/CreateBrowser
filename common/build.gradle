@@ -28,6 +28,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    systemProperty 'createbrowser.version', project.version
+    systemProperty 'createbrowser.mcVersion', minecraft_version
 }
 
 configurations {
